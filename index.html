@@ -56,7 +56,14 @@
       try {
         const response = await fetch("./dashboard.enc.json", { cache: "no-store" });
         if (!response.ok) throw new Error("看板数据尚未发布。");
-        const payload = await response.json();
+        const manifest = await response.json();
+        const payload = Array.isArray(manifest.parts)
+          ? JSON.parse((await Promise.all(manifest.parts.map(async (path) => {
+              const partResponse = await fetch("./" + path, { cache: "no-store" });
+              if (!partResponse.ok) throw new Error("看板数据尚未发布。");
+              return partResponse.text();
+            }))).join(""))
+          : manifest;
         const html = new TextDecoder().decode(await decrypt(input.value, payload));
         if (!html.startsWith("<!doctype html>")) throw new Error("访问密码不正确。");
         input.value = "";
